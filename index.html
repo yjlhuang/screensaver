@@ -1,0 +1,121 @@
+<div style="padding: 2rem 0; min-height: 500px;">
+<h2 class="sr-only">A meditative piece about passage. Gentle waves of dots flow across the screen, each appearing and fading without accumulating. A phrase slowly materializes one word at a time.</h2>
+
+<div style="text-align: center; margin-bottom: 2rem;">
+  <p style="font-family: var(--font-serif); font-size: 15px; color: var(--color-text-secondary); font-style: italic; margin: 0;">
+    Je ne peins pas l'être, je peins le passage.
+  </p>
+  <p style="font-size: 12px; color: var(--color-text-tertiary); margin-top: 4px;">— Montaigne</p>
+</div>
+
+<canvas id="passage-canvas" width="680" height="360" style="width: 100%; height: 360px; display: block;"></canvas>
+
+<div style="text-align: center; margin-top: 2rem; min-height: 40px;">
+  <p id="phrase" style="font-family: var(--font-serif); font-size: 16px; color: var(--color-text-primary); margin: 0; letter-spacing: 0.02em; opacity: 0; transition: opacity 2s;"></p>
+</div>
+
+<script>
+(function() {
+  const canvas = document.getElementById('passage-canvas');
+  const ctx = canvas.getContext('2d');
+  const dpr = window.devicePixelRatio || 1;
+  canvas.width = 680 * dpr;
+  canvas.height = 360 * dpr;
+  ctx.scale(dpr, dpr);
+
+  const W = 680, H = 360;
+  
+  // get theme colors
+  const style = getComputedStyle(document.documentElement);
+  const textColor = style.getPropertyValue('--color-text-secondary').trim() || '#666';
+  const accentColor = style.getPropertyValue('--color-text-info').trim() || '#185FA5';
+  
+  // particles that pass through
+  const particles = [];
+  
+  function spawn() {
+    // spawn from left edge at random y
+    const y = 60 + Math.random() * (H - 120);
+    const speed = 0.3 + Math.random() * 0.8;
+    const size = 1 + Math.random() * 2.5;
+    const hue = Math.random();
+    particles.push({
+      x: -10,
+      y: y,
+      vx: speed,
+      vy: (Math.random() - 0.5) * 0.1,
+      size: size,
+      life: 0,
+      maxLife: 300 + Math.random() * 300,
+      opacity: 0,
+      hue: hue
+    });
+  }
+  
+  function draw() {
+    // fade everything slightly each frame — creates trails that accumulate briefly then fade
+    ctx.fillStyle = 'rgba(255, 255, 255, 0)';
+    ctx.clearRect(0, 0, W, H);
+    
+    // spawn new
+    if (Math.random() < 0.4) spawn();
+    
+    // update + draw
+    for (let i = particles.length - 1; i >= 0; i--) {
+      const p = particles[i];
+      p.life++;
+      p.x += p.vx;
+      p.y += p.vy;
+      
+      // fade in, hold, fade out
+      const lifeFrac = p.life / p.maxLife;
+      if (lifeFrac < 0.1) p.opacity = lifeFrac * 10;
+      else if (lifeFrac > 0.8) p.opacity = (1 - lifeFrac) * 5;
+      else p.opacity = 1;
+      
+      // color shift — subtle blue-to-warm based on position
+      const colorMix = (p.x / W);
+      let color;
+      if (p.hue < 0.33) color = accentColor;
+      else if (p.hue < 0.66) color = textColor;
+      else color = '#888';
+      
+      ctx.globalAlpha = p.opacity * 0.5;
+      ctx.fillStyle = color;
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+      ctx.fill();
+      
+      // remove when done
+      if (p.x > W + 10 || p.life > p.maxLife) {
+        particles.splice(i, 1);
+      }
+    }
+    
+    ctx.globalAlpha = 1;
+    
+    requestAnimationFrame(draw);
+  }
+  
+  draw();
+  
+  // phrase appears word by word
+  const phrase = "nothing stays. everything happened.";
+  const words = phrase.split(' ');
+  const phraseEl = document.getElementById('phrase');
+  
+  setTimeout(() => {
+    phraseEl.style.opacity = '1';
+    let i = 0;
+    function showWord() {
+      if (i < words.length) {
+        phraseEl.textContent = words.slice(0, i + 1).join(' ');
+        i++;
+        setTimeout(showWord, 1400);
+      }
+    }
+    showWord();
+  }, 3000);
+})();
+</script>
+</div>
