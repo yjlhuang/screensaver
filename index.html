@@ -33,12 +33,12 @@
   }
   #phrase {
     font-family: 'Georgia', 'Times New Roman', 'Noto Serif TC', serif;
-    font-size: 19px;
-    color: rgba(220, 225, 240, 0);
+    font-size: 32px;
+    color: rgba(255, 255, 255, 0);
     letter-spacing: 0.04em;
-    line-height: 1.7;
+    line-height: 1.6;
     text-align: center;
-    max-width: 640px;
+    max-width: 1000px;
     padding: 0 2rem;
     font-style: italic;
     transition: color 3.5s ease-in-out;
@@ -82,10 +82,9 @@
     canvas.height = newH * window.devicePixelRatio;
     canvas.style.width = newW + 'px';
     canvas.style.height = newH + 'px';
-    ctx.setTransform(1, 0, 0, 1, 0, 0); // reset transform before scaling
+    ctx.setTransform(1, 0, 0, 1, 0, 0);
     ctx.scale(window.devicePixelRatio, window.devicePixelRatio);
     
-    // remap existing stars proportionally to new dimensions
     if (prevW > 0 && prevH > 0 && (newW !== prevW || newH !== prevH)) {
       const scaleX = newW / prevW;
       const scaleY = newH / prevH;
@@ -97,7 +96,6 @@
       for (const s of formingStars) {
         s.x *= scaleX;
         s.y *= scaleY;
-        // also remap formingTo if mid-formation
         if (s.formingTo) {
           s.formingTo.x *= scaleX;
           s.formingTo.y *= scaleY;
@@ -143,31 +141,24 @@
     }
   }, { once: true });
   
-  // also remap when entering/exiting fullscreen
   document.addEventListener('fullscreenchange', () => {
-    // wait a frame for window dimensions to settle
     requestAnimationFrame(() => {
       resize();
     });
   });
-  
-  // ========================================
-  // TWO LAYERS — ambient never forms, forming stars gather
-  // ========================================
   
   const ambientStars = [];
   const AMBIENT_COUNT = 320;
   const AMBIENT_BRIGHT = 35;
   
   const formingStars = [];
-  const FORMING_COUNT = 240;
+  const FORMING_COUNT = 280; // a touch more for larger text
   
-  // initialize size first so we can place stars
   W = window.innerWidth;
   H = window.innerHeight;
   prevW = W;
   prevH = H;
-  resize(); // also sets canvas attributes
+  resize();
   
   for (let i = 0; i < AMBIENT_COUNT; i++) {
     ambientStars.push({
@@ -209,7 +200,6 @@
     });
   }
   
-  // hook resize after stars exist
   window.addEventListener('resize', resize);
   
   const phrases = [
@@ -230,14 +220,14 @@
     "Each glance is the only glance.",
     "Carpe diem, quam minimum credula postero.",
     "It happened. That is enough.",
-    "我們是塵與影",
-    "一切都在流動",
-    "——此刻是真的",
-    "彈指之間，山河已老",
+    "我們是塵與影。",
+    "一切都在流動。",
+    "此刻是真的。",
+    "彈指之間,山河已老。",
     "Still here.",
     "The stars are rearranging themselves.",
     "Tomorrow is tomorrow.",
-    "今天到這裡就好？"
+    "今天到這裡就好。"
   ];
   
   for (let i = phrases.length - 1; i > 0; i--) {
@@ -332,13 +322,14 @@
     measureCanvas.height = H;
     const mctx = measureCanvas.getContext('2d');
     
-    const fontSize = Math.min(28, Math.max(18, W / 50));
+    // larger font: scale with viewport, generous range
+    const fontSize = Math.min(56, Math.max(32, W / 28));
     mctx.font = "italic " + fontSize + "px Georgia, 'Times New Roman', 'Noto Serif TC', serif";
     mctx.fillStyle = '#fff';
     mctx.textAlign = 'center';
     mctx.textBaseline = 'middle';
     
-    const maxWidth = Math.min(W - 120, 800);
+    const maxWidth = Math.min(W - 160, 1200);
     const words = text.split(' ');
     const lines = [];
     let current = '';
@@ -353,7 +344,7 @@
     }
     if (current) lines.push(current);
     
-    const lineHeight = fontSize * 1.6;
+    const lineHeight = fontSize * 1.5;
     const startY = H / 2 - (lines.length - 1) * lineHeight / 2;
     lines.forEach((line, i) => {
       mctx.fillText(line, W / 2, startY + i * lineHeight);
@@ -361,7 +352,8 @@
     
     const imgData = mctx.getImageData(0, 0, W, H);
     const points = [];
-    const step = 3;
+    // larger step for larger font to keep star density manageable
+    const step = 4;
     for (let y = 0; y < H; y += step) {
       for (let x = 0; x < W; x += step) {
         const idx = (y * W + x) * 4;
@@ -402,7 +394,7 @@
     
     phraseEl.textContent = text;
     setTimeout(() => {
-      phraseEl.style.color = 'rgba(255, 255, 255, 0.9)';
+      phraseEl.style.color = 'rgba(255,255,255,0.9)';
     }, 4500);
   }
   
@@ -414,7 +406,7 @@
     }
     state = 'dispersing';
     stateTimer = 0;
-    phraseEl.style.color = 'rgba(220,225,240,0)';
+    phraseEl.style.color = 'rgba(255,255,255,0)';
   }
   
   function startDrifting() {
