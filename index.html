@@ -72,17 +72,44 @@
   const exitHint = document.getElementById('exit-hint');
   
   let W, H;
+  let prevW = 0, prevH = 0;
+  
   function resize() {
-    W = window.innerWidth;
-    H = window.innerHeight;
-    canvas.width = W * window.devicePixelRatio;
-    canvas.height = H * window.devicePixelRatio;
-    canvas.style.width = W + 'px';
-    canvas.style.height = H + 'px';
+    const newW = window.innerWidth;
+    const newH = window.innerHeight;
+    
+    canvas.width = newW * window.devicePixelRatio;
+    canvas.height = newH * window.devicePixelRatio;
+    canvas.style.width = newW + 'px';
+    canvas.style.height = newH + 'px';
+    ctx.setTransform(1, 0, 0, 1, 0, 0); // reset transform before scaling
     ctx.scale(window.devicePixelRatio, window.devicePixelRatio);
+    
+    // remap existing stars proportionally to new dimensions
+    if (prevW > 0 && prevH > 0 && (newW !== prevW || newH !== prevH)) {
+      const scaleX = newW / prevW;
+      const scaleY = newH / prevH;
+      
+      for (const s of ambientStars) {
+        s.x *= scaleX;
+        s.y *= scaleY;
+      }
+      for (const s of formingStars) {
+        s.x *= scaleX;
+        s.y *= scaleY;
+        // also remap formingTo if mid-formation
+        if (s.formingTo) {
+          s.formingTo.x *= scaleX;
+          s.formingTo.y *= scaleY;
+        }
+      }
+    }
+    
+    W = newW;
+    H = newH;
+    prevW = newW;
+    prevH = newH;
   }
-  resize();
-  window.addEventListener('resize', resize);
   
   setTimeout(() => exitHint.classList.add('faded'), 6000);
   
@@ -116,15 +143,31 @@
     }
   }, { once: true });
   
+  // also remap when entering/exiting fullscreen
+  document.addEventListener('fullscreenchange', () => {
+    // wait a frame for window dimensions to settle
+    requestAnimationFrame(() => {
+      resize();
+    });
+  });
+  
   // ========================================
-  // TWO LAYERS:
-  // 1. ambientStars — always drift, never form, fill the sky
-  // 2. formingStars — gather to make phrases
+  // TWO LAYERS — ambient never forms, forming stars gather
   // ========================================
   
   const ambientStars = [];
   const AMBIENT_COUNT = 320;
   const AMBIENT_BRIGHT = 35;
+  
+  const formingStars = [];
+  const FORMING_COUNT = 240;
+  
+  // initialize size first so we can place stars
+  W = window.innerWidth;
+  H = window.innerHeight;
+  prevW = W;
+  prevH = H;
+  resize(); // also sets canvas attributes
   
   for (let i = 0; i < AMBIENT_COUNT; i++) {
     ambientStars.push({
@@ -152,10 +195,6 @@
     });
   }
   
-  // forming stars — slightly brighter so they "stand out" as the constellation
-  const formingStars = [];
-  const FORMING_COUNT = 240;
-  
   for (let i = 0; i < FORMING_COUNT; i++) {
     formingStars.push({
       x: Math.random() * W,
@@ -169,6 +208,9 @@
       formingTo: null
     });
   }
+  
+  // hook resize after stars exist
+  window.addEventListener('resize', resize);
   
   const phrases = [
     "Omnia mutantur, nihil interit.",
@@ -190,12 +232,12 @@
     "It happened. That is enough.",
     "我們是塵與影",
     "一切都在流動",
-    "此刻是真的",
+    "——此刻是真的",
     "彈指之間，山河已老",
     "Still here.",
     "The stars are rearranging themselves.",
     "Tomorrow is tomorrow.",
-    "今天到這裡就好"
+    "今天到這裡就好？"
   ];
   
   for (let i = phrases.length - 1; i > 0; i--) {
@@ -212,7 +254,6 @@
     const twinkle = Math.sin(time * s.twinkleSpeed + s.twinklePhase) * 0.25 + 0.75;
     const alpha = s.baseAlpha * twinkle;
     
-    // halo — slightly larger and bluer for forming stars
     const haloRadius = s.size * (isAmbient ? 3 : 3.5);
     const haloAlpha = alpha * 0.25;
     const grad = ctx.createRadialGradient(s.x, s.y, 0, s.x, s.y, haloRadius);
@@ -230,7 +271,6 @@
     ctx.arc(s.x, s.y, haloRadius, 0, Math.PI * 2);
     ctx.fill();
     
-    // core
     ctx.fillStyle = 'rgba(240,245,255,' + alpha + ')';
     ctx.beginPath();
     ctx.arc(s.x, s.y, s.size * 0.6, 0, Math.PI * 2);
@@ -238,7 +278,6 @@
   }
   
   function updateAmbient() {
-    // ambient stars always drift, never participate in forming
     for (const s of ambientStars) {
       s.x += s.vx;
       s.y += s.vy;
@@ -280,11 +319,9 @@
   function draw(time) {
     ctx.clearRect(0, 0, W, H);
     
-    // draw ambient first (slightly behind)
     updateAmbient();
     for (const s of ambientStars) drawStar(s, time, true);
     
-    // then forming (slightly in front, slightly brighter)
     updateForming();
     for (const s of formingStars) drawStar(s, time, false);
   }
